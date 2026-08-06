@@ -22,4 +22,16 @@ test.describe('accessibility', () => {
       expect(blocking.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
     });
   }
+
+  test('has no serious or critical axe violations with the fullscreen editor expanded (#116)', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/edit-markdown-table/');
+    await page.waitForFunction(() => (window as Record<string, unknown>).__toolReady === true);
+    await page.locator('#expand-editor-action').click();
+    await page.locator('[data-testid="editor"]').waitFor({ state: 'visible' });
+
+    const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const blocking = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(blocking.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  });
 });

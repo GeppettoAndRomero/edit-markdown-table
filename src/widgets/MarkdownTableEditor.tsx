@@ -23,7 +23,9 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { AppCard } from './AppCard';
 import { AppButton } from './AppButton';
+import { AppModal } from './AppModal';
 import { ErrorToast } from './ErrorToast';
+import { FullscreenShell } from './FullscreenShell';
 import { isAcceptedTableFile } from '@/utils/fileValidation';
 import {
   createBlankTable,
@@ -64,6 +66,17 @@ export function MarkdownTableEditor({ locale = 'en' }: MarkdownTableEditorProps)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
   const [errorToasts, setErrorToasts] = useState<ErrorToastItem[]>([]);
 
+  // Fullscreen editing session (#116, Tier 1). Unlike a viewer/importer tool,
+  // the grid has no natural "nothing loaded yet" state (a blank table is
+  // live from first render), so entering fullscreen is an explicit action
+  // rather than automatic on import. `baselineMarkdown` snapshots the table
+  // at the start of the current session (mount, last import, or last
+  // discard-and-close); the session is "dirty" once the grid has diverged
+  // from it, which gates the confirm-before-discard on close (D4).
+  const [expanded, setExpanded] = useState(false);
+  const [baselineMarkdown, setBaselineMarkdown] = useState(() => serializeTable(createBlankTable()));
+  const [confirmClose, setConfirmClose] = useState(false);
+
   const cellRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -94,6 +107,7 @@ export function MarkdownTableEditor({ locale = 'en' }: MarkdownTableEditorProps)
         return false;
       }
       setData(parsed);
+      setBaselineMarkdown(serializeTable(parsed));
       setImportError(null);
       return true;
     },
@@ -144,8 +158,30 @@ export function MarkdownTableEditor({ locale = 'en' }: MarkdownTableEditorProps)
   const handleAddColumn = () => setData((d) => addColumn(d));
   const handleRemoveColumn = (col: number) => setData((d) => removeColumn(d, col));
   const handleStartOver = () => {
-    setData(createBlankTable());
+    const blank = createBlankTable();
+    setData(blank);
+    setBaselineMarkdown(serializeTable(blank));
     setImportError(null);
+  };
+
+  // ---- fullscreen editing session (#116) --------------------------------
+
+  const isDirty = markdown !== baselineMarkdown;
+
+  const requestCloseEditor = () => {
+    if (isDirty) setConfirmClose(true);
+    else setExpanded(false);
+  };
+
+  const handleRequestClose = () => {
+    if (confirmClose) setConfirmClose(false);
+    else requestCloseEditor();
+  };
+
+  const performCloseDiscard = () => {
+    handleStartOver();
+    setConfirmClose(false);
+    setExpanded(false);
   };
 
   const lastRow = data.rows.length - 1;
@@ -218,55 +254,27 @@ export function MarkdownTableEditor({ locale = 'en' }: MarkdownTableEditorProps)
     else cellRefs.current.delete(key);
   };
 
-  return (
-    <div>
-      <AppCard>
-        <div style="margin-bottom: var(--space-4);">
-          <h2 style="margin: 0 0 var(--space-1) 0; font-size: var(--fs-4); font-weight: 600;">
-            {t.importHeading}
-          </h2>
-          <p style="margin: 0; font-size: var(--fs-2); color: var(--color-subtle);">{t.importSubtitle}</p>
-        </div>
-        <textarea
-          id="import-textarea"
-          class="app-field__textarea"
-          style="width: 100%; min-height: 100px; font-family: ui-monospace, monospace; font-size: var(--fs-2);"
-          placeholder={t.importPlaceholder}
-          value={importText}
-          onInput={(e) => setImportText((e.target as HTMLTextAreaElement).value)}
-        />
-        {importError && (
-          <p role="alert" style="color: var(--color-danger); font-size: var(--fs-2); margin: var(--space-2) 0 0 0;">
-            {importError}
-          </p>
-        )}
-        <div style="display: flex; gap: var(--space-2); margin-top: var(--space-3);">
-          <button
-            id="import-action"
-            type="button"
-            class="app-button app-button--primary"
-            disabled={!importText.trim()}
-            onClick={handleImportClick}
-          >
-            {t.importButton}
-          </button>
-          {importText && (
-            <AppButton variant="secondary" onClick={() => { setImportText(''); setImportError(null); }}>
-              {t.clearImport}
-            </AppButton>
-          )}
-        </div>
-      </AppCard>
-
+  // Grid + output — rendered inline in the normal column when not expanded,
+  // or as FullscreenShell's children when expanded (#116). Same JSX either
+  // way; only the wrapper differs.
+  const editorBody = (
+    <>
       <AppCard className="mt-6">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4);">
           <div>
             <h2 style="margin: 0 0 var(--space-1) 0; font-size: var(--fs-4); font-weight: 600;">{t.gridHeading}</h2>
             <p style="margin: 0; font-size: var(--fs-2); color: var(--color-subtle);">{t.gridSubtitle}</p>
           </div>
-          <button type="button" class="app-button app-button--secondary" onClick={handleStartOver}>
-            {t.startOver}
-          </button>
+          <span style="display: flex; gap: var(--space-2);">
+            {!expanded && (
+              <button type="button" id="expand-editor-action" class="app-button app-button--secondary" onClick={() => setExpanded(true)}>
+                {t.expandEditor}
+              </button>
+            )}
+            <button type="button" class="app-button app-button--secondary" onClick={handleStartOver}>
+              {t.startOver}
+            </button>
+          </span>
         </div>
 
         <div class="mt-grid-scroll">
@@ -377,6 +385,75 @@ export function MarkdownTableEditor({ locale = 'en' }: MarkdownTableEditorProps)
           </p>
         )}
       </AppCard>
+    </>
+  );
+
+  return (
+    <div>
+      <AppCard>
+        <div style="margin-bottom: var(--space-4);">
+          <h2 style="margin: 0 0 var(--space-1) 0; font-size: var(--fs-4); font-weight: 600;">
+            {t.importHeading}
+          </h2>
+          <p style="margin: 0; font-size: var(--fs-2); color: var(--color-subtle);">{t.importSubtitle}</p>
+        </div>
+        <textarea
+          id="import-textarea"
+          class="app-field__textarea"
+          style="width: 100%; min-height: 100px; font-family: ui-monospace, monospace; font-size: var(--fs-2);"
+          placeholder={t.importPlaceholder}
+          value={importText}
+          onInput={(e) => setImportText((e.target as HTMLTextAreaElement).value)}
+        />
+        {importError && (
+          <p role="alert" style="color: var(--color-danger); font-size: var(--fs-2); margin: var(--space-2) 0 0 0;">
+            {importError}
+          </p>
+        )}
+        <div style="display: flex; gap: var(--space-2); margin-top: var(--space-3);">
+          <button
+            id="import-action"
+            type="button"
+            class="app-button app-button--primary"
+            disabled={!importText.trim()}
+            onClick={handleImportClick}
+          >
+            {t.importButton}
+          </button>
+          {importText && (
+            <AppButton variant="secondary" onClick={() => { setImportText(''); setImportError(null); }}>
+              {t.clearImport}
+            </AppButton>
+          )}
+        </div>
+      </AppCard>
+
+      {!expanded && editorBody}
+
+      {expanded && (
+        <FullscreenShell
+          open={expanded}
+          onRequestClose={handleRequestClose}
+          label={t.editorAria}
+          closeLabel={t.closeEditor}
+          testId="editor"
+          closeTestId="close-editor"
+        >
+          {editorBody}
+        </FullscreenShell>
+      )}
+
+      <AppModal isOpen={confirmClose} onClose={() => setConfirmClose(false)} title={t.closeConfirmTitle} locale={locale}>
+        <p>{t.closeConfirmBody}</p>
+        <div style="display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4);">
+          <button type="button" class="app-button app-button--ghost" onClick={() => setConfirmClose(false)}>
+            {t.closeConfirmCancel}
+          </button>
+          <button id="confirm-close-editor-action" type="button" class="app-button app-button--primary" onClick={performCloseDiscard}>
+            {t.closeConfirmConfirm}
+          </button>
+        </div>
+      </AppModal>
 
       {errorToasts.length > 0 && (
         <div className="error-toast-container" aria-label={t.notificationsAria}>

@@ -39,6 +39,13 @@ export const ui = {
     addRow: 'Add row',
     addColumn: 'Add column',
     startOver: 'Start over',
+    expandEditor: 'Expand',
+    editorAria: 'Markdown table editor',
+    closeEditor: 'Close the editor',
+    closeConfirmTitle: 'Close without saving?',
+    closeConfirmBody: 'This discards the current table and every change made to it. This cannot be undone.',
+    closeConfirmConfirm: 'Discard and close',
+    closeConfirmCancel: 'Cancel',
 
     // MarkdownTableEditor — output
     outputHeading: 'Markdown',
@@ -98,6 +105,13 @@ export const ui = {
     addRow: '行を追加',
     addColumn: '列を追加',
     startOver: '最初からやり直す',
+    expandEditor: '全画面表示',
+    editorAria: 'Markdown テーブルエディタ',
+    closeEditor: 'エディタを閉じる',
+    closeConfirmTitle: '保存せずに閉じますか？',
+    closeConfirmBody: '現在のテーブルとすべての変更が失われます。この操作は取り消せません。',
+    closeConfirmConfirm: '破棄して閉じる',
+    closeConfirmCancel: 'キャンセル',
 
     // MarkdownTableEditor — output
     outputHeading: 'Markdown',
@@ -155,6 +169,13 @@ export const ui = {
     addRow: '添加行',
     addColumn: '添加列',
     startOver: '重新开始',
+    expandEditor: '全屏显示',
+    editorAria: 'Markdown 表格编辑器',
+    closeEditor: '关闭编辑器',
+    closeConfirmTitle: '不保存就关闭？',
+    closeConfirmBody: '这会丢弃当前表格及其所有修改，且无法撤销。',
+    closeConfirmConfirm: '放弃并关闭',
+    closeConfirmCancel: '取消',
 
     // MarkdownTableEditor — output
     outputHeading: 'Markdown',
@@ -214,6 +235,13 @@ export const ui = {
     addRow: 'Zeile hinzufügen',
     addColumn: 'Spalte hinzufügen',
     startOver: 'Neu beginnen',
+    expandEditor: 'Vollbild',
+    editorAria: 'Markdown-Tabelleneditor',
+    closeEditor: 'Editor schließen',
+    closeConfirmTitle: 'Ohne Speichern schließen?',
+    closeConfirmBody: 'Damit gehen die aktuelle Tabelle und alle daran vorgenommenen Änderungen verloren. Das lässt sich nicht rückgängig machen.',
+    closeConfirmConfirm: 'Verwerfen und schließen',
+    closeConfirmCancel: 'Abbrechen',
 
     // MarkdownTableEditor — output
     outputHeading: 'Markdown',
@@ -273,6 +301,13 @@ export const ui = {
     addRow: 'Añadir fila',
     addColumn: 'Añadir columna',
     startOver: 'Empezar de nuevo',
+    expandEditor: 'Pantalla completa',
+    editorAria: 'Editor de tablas Markdown',
+    closeEditor: 'Cerrar el editor',
+    closeConfirmTitle: '¿Cerrar sin guardar?',
+    closeConfirmBody: 'Esto descarta la tabla actual y todos los cambios hechos en ella. No se puede deshacer.',
+    closeConfirmConfirm: 'Descartar y cerrar',
+    closeConfirmCancel: 'Cancelar',
 
     // MarkdownTableEditor — output
     outputHeading: 'Markdown',
